@@ -1,4 +1,4 @@
-# CortexAI
+# NexaAI
 
 CortexAI is a full-stack multi-agent AI workspace with a React frontend and a Node.js microservice backend.
 
