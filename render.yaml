@@ -1,0 +1,140 @@
+services:
+  - type: web
+    name: nexaai-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    buildFilter:
+      paths:
+        - frontend/**
+        - render.yaml
+    envVars:
+      - key: VITE_SERVER_URL
+        value: https://nexaai-gateway.onrender.com
+      - key: VITE_FIREBASE_API_KEY
+        sync: false
+      - key: VITE_RAZORPAY_KEY_ID
+        sync: false
+
+  - type: web
+    name: nexaai-gateway
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: gateway/Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    buildFilter:
+      paths:
+        - backend/gateway/**
+        - backend/shared/**
+        - backend/package*.json
+        - render.yaml
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: FRONTEND_URL
+        value: https://nexaai-frontend.onrender.com
+      - key: AUTH_SERVICE
+        value: http://nexaai-auth:10000
+      - key: CHAT_SERVICE
+        value: http://nexaai-chat:10000
+      - key: AGENT_SERVICE
+        value: http://nexaai-agent:10000
+      - key: BILLING_SERVICE
+        value: http://nexaai-billing:10000
+      - key: REDIS_URL
+        fromService:
+          name: nexaai-redis
+          type: keyvalue
+          property: connectionString
+
+  - type: pserv
+    name: nexaai-auth
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: services/auth/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: nexaai-redis
+          type: keyvalue
+          property: connectionString
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+
+  - type: pserv
+    name: nexaai-chat
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: services/chat/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: MONGODB_URI
+        sync: false
+
+  - type: pserv
+    name: nexaai-agent
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: services/agent/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: MONGODB_URI
+        sync: false
+      - key: CHAT_SERVICE
+        value: http://nexaai-chat:10000
+      - key: AUTH_SERVICE
+        value: http://nexaai-auth:10000
+      - key: QDRANT_URL
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_KEY
+        sync: false
+      - key: AWS_BUCKET_NAME
+        sync: false
+
+  - type: pserv
+    name: nexaai-billing
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: services/billing/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: MONGODB_URI
+        sync: false
+      - key: AUTH_SERVICE
+        value: http://nexaai-auth:10000
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+
+  - type: keyvalue
+    name: nexaai-redis
+    plan: 256mb
+    region: singapore
+    maxmemoryPolicy: allkeys-lru
+    persistenceMode: snapshot
